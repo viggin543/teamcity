@@ -11,13 +11,30 @@ import (
 
 
 func main() {
-	searchToken := commandLineArg()
-	projects := api.FetchProjects().ToItems()
-	buildTypes := api.FetchBuildTypes().ToItems()
 
-	items := &model.Items{Items: append(projects, buildTypes...)}
-	itemsJson, _ := json.Marshal(model.Items{Items: items.FilterByString(searchToken)})
+	var projects = make(chan []*model.Item)
+	var buildTypes = make(chan []*model.Item)
+	go func() {
+		projects <- api.FetchProjects().ToItems()
+	}()
+	go func() {
+		buildTypes <- api.FetchBuildTypes().ToItems()
+	}()
+
+	items := filterItemsByCommandLineArg(projects, buildTypes)
+	printItemsAsJson(items)
+}
+
+func printItemsAsJson(items model.Items) {
+	itemsJson, _ := json.Marshal(items)
 	fmt.Println(string(itemsJson))
+}
+
+func filterItemsByCommandLineArg(projects chan []*model.Item, buildTypes chan []*model.Item) model.Items {
+	searchToken := commandLineArg()
+	unfilteredItems := append(<-projects, <-buildTypes...)
+	items := model.Items{Items: model.FilterItems(unfilteredItems, searchToken)}
+	return items
 }
 
 func commandLineArg() string {

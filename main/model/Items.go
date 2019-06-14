@@ -12,6 +12,10 @@ type Items struct {
 	Items []*Item `json:"items"`
 }
 
+func FilterItems(items []*Item, token string) []*Item {
+	return (&Items{Items: items}).FilterByString(token)
+}
+
 func (items *Items) FilterByString(token string) []*Item {
 	return items.Filter(func(item *Item) bool {
 		title := strings.ToLower(item.Title)
